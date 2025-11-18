@@ -1,0 +1,182 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }}</title> 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* 1. Imagen de Fondo del Usuario (ACTUALIZADA con el nuevo enlace) */
+            background-image: url('https://media.istockphoto.com/id/1874702491/es/foto/joven-estudiante-universitaria-sonriendo-mientras-hace-la-tarea-en-la-cafeter%C3%ADa-de-una-escuela.jpg?s=612x612&w=0&k=20&c=1rA3jrVEdq_cbKq1EZRy52FR2XnSorGfz8umNkb3zvE='); 
+            background-color: #e2e8f0; 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh; /* Asegura que el fondo cubra toda la altura */
+        }
+        /* Estilo para el mensaje de error de validación */
+        .rut-error-message {
+            color: #dc2626; /* red-600 */
+            font-size: 0.875rem; /* text-sm */
+            margin-top: 0.5rem; /* mt-2 */
+            display: none;
+        }
+        /* Clase para quitar el hover azul/morado de enlaces */
+        .no-hover-link {
+            text-decoration: none !important;
+            color: #4f46e5; /* Color base indigo-600 */
+        }
+        .no-hover-link:hover {
+            color: #4f46e5 !important; /* Mantiene el color base */
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Contenedor Principal (Ahora semitransparente: bg-white/95) -->
+    <div class="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl rounded-xl p-6 sm:p-10">
+        
+        <!-- Navegación y Encabezado -->
+        <header class="mb-8 border-b pb-4">
+            <!-- Enlace de regreso con hover desactivado -->
+            <a href="{% url 'app:inicio' %}" class="text-indigo-600 font-medium mb-4 inline-block no-hover-link">
+                &larr; volver a la pagina principal
+            </a>
+            <h1 class="text-3xl font-extrabold text-indigo-800 mb-2">{{ sala.nombre }}</h1>
+            <p class="text-lg text-gray-600">Capacidad Máxima: <span class="font-bold">{{ sala.capacidad_maxima }}</span> personas.</p>
+        </header>
+
+        <!-- Mensajes de Alerta/Éxito (Permanentes) -->
+        {% if request.GET.exito %}
+            <div id="mensaje-exito" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <strong class="font-bold">se ha reservado con exito</strong>
+                <span class="block sm:inline">{{ request.GET.exito|urlencode|safe }}</span>
+            </div>
+        {% endif %}
+        {% if request.GET.error %}
+            <div id="mensaje-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <strong class="font-bold">error la sala no se ha podido reservar</strong>
+                <span class="block sm:inline">{{ request.GET.error|urlencode|safe }}</span>
+            </div>
+        {% endif %}
+
+        <!-- Grid de Contenido Principal (Ahora ocupa 1 columna) -->
+        <div class="grid grid-cols-1 gap-8">
+            
+            <!-- Contenido Principal: Estado y Reserva (Ocupa todo el ancho) -->
+            <div class="col-span-1">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Estado</h2>
+
+                {% if esta_disponible %}
+                    <!-- Recuadro: Disponible (Fondo Verde Sólido) -->
+                    <div class="bg-green-600 text-white p-6 rounded-lg mb-6 shadow-xl">
+                        <p class="text-3xl font-extrabold mb-1 uppercase">sala disponible</p>
+                        <p class="text-lg font-light">Esta sala se puede reservar por un maximo de 2 horas</p>
+                    </div>
+
+                    <!-- Recuadro: Formulario de Reserva (Simulando un Card, se mantiene el estilo azul claro) -->
+                    <div class="p-6 bg-indigo-50 border border-indigo-200 rounded-lg shadow-lg">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-4 border-b pb-2">Formulario de Reserva</h3>
+                        <p class="text-sm text-gray-600 mb-4">La reserva dura hasta dos horas</p>
+                        
+                        <form id="form-reserva" method="POST" action="{% url 'app:reservar_sala' sala_id=sala.id %}">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <label for="rut_persona" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Ingresa tu RUT sin puntos y con guion (Ej. 12345678-9):
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="rut_persona" 
+                                    name="rut_persona" 
+                                    required 
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Sin puntos, con guion"
+                                    maxlength="12"
+                                >
+                                <p id="rut-error" class="rut-error-message">
+                                    El formato del RUT es incorrecto. Debe ser sin puntos, con guion (Ej: 12345678-9).
+                                </p>
+                            </div>
+                            
+                            <!-- Botón de reserva con hover desactivado -->
+                            <button type="submit" id="btn-reserva" class="w-full bg-green-600 text-white font-semibold py-2 rounded-lg shadow-md">
+                                Confirmar reserva por 2 horas
+                            </button>
+                        </form>
+                    </div>
+
+                {% else %}
+                    <!-- Recuadro: Reservada (Fondo Rojo Sólido UNIFICADO) -->
+                    <div class="bg-red-600 text-white p-6 rounded-lg shadow-xl mb-6">
+                        <p class="text-3xl font-extrabold mb-2 uppercase">sala reservada</p>
+                        <p class="text-lg font-light mb-4">la sala esta ocupada.</p>
+
+                        {% if reserva_actual %}
+                        <!-- Detalle de la Reserva (UNIFICADO en el mismo recuadro) -->
+                        <div class="mt-4 pt-3 border-t border-red-500">
+                            <p class="text-sm font-medium text-white mb-1 uppercase">detalle de reserva:</p>
+                            <ul class="list-disc list-inside text-sm text-red-100 space-y-1">
+                                <li>Reservado por RUT: <span class="font-semibold text-white">{{ reserva_actual.rut_persona }}</span></li>
+                                <li>Hora de inicio: <span class="font-semibold text-white">{{ reserva_actual.hora_inicio|date:"d M H:i" }}</span></li>
+                                <li>Hora de término: <span class="font-bold text-yellow-300">{{ reserva_actual.hora_termino|date:"d M H:i" }}</span></li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div> <!-- Fin de col-span-1 -->
+            
+        </div> <!-- Fin de grid -->
+
+        <!-- Pie de página (Footer) eliminado/vaciado según lo solicitado -->
+        <footer class="mt-10 pt-5 border-t border-gray-200 text-center">
+             <!-- Los enlaces han sido eliminados según tu solicitud. -->
+        </footer>
+    </div>
+    
+    <!-- Lógica JavaScript de Validación de RUT (se mantiene) -->
+    <script>
+        window.onload = function() {
+            // Se eliminó la lógica para ocultar mensajes de éxito/error.
+
+            // --- Lógica de Validación de RUT ---
+            const form = document.getElementById('form-reserva');
+            const rutInput = document.getElementById('rut_persona');
+            const rutError = document.getElementById('rut-error');
+
+            form.addEventListener('submit', function(event) {
+                let rut = rutInput.value.trim();
+                
+                // 1. Verificar que no haya espacios en blanco
+                if (rut.includes(' ')) {
+                    rutError.textContent = 'El RUT no debe contener espacios en blanco.';
+                    rutError.style.display = 'block';
+                    event.preventDefault(); // Detener el envío del formulario
+                    return;
+                }
+
+                // 2. Verificar el formato: [dígitos]-[dígito o K/k]
+                const rutPattern = /^\d+[\-][\dkK]$/;
+
+                if (!rutPattern.test(rut)) {
+                    rutError.textContent = 'El formato del RUT es incorrecto. Debe ser sin puntos y CON guion (Ej: 12345678-9).';
+                    rutError.style.display = 'block';
+                    event.preventDefault(); // Detener el envío del formulario
+                } else {
+                    // Si es válido, ocultar el error y permitir el envío
+                    rutError.style.display = 'none';
+                }
+            });
+
+            // Ocultar el error al escribir
+            rutInput.addEventListener('input', function() {
+                rutError.style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>
